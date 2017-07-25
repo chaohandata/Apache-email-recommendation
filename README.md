@@ -1,0 +1,2 @@
+# Apache-email-recommendation
+This project is all about recommending emails to read to a user based on his/her current activity and session information. Though it is a recommendation task standard matrix factorization like SVD, ALS will not work as we do not have a user profile built. Thus, we use different approaches like Locality Sensitive Hashing for Approximate Nearest Neighbors, and Markov Chain to give relevant recommendations.
