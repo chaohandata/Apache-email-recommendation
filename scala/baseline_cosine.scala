@@ -1,0 +1,65 @@
+import com.lucidworks.spark.rdd.SolrRDD
+//val solrRDD = SolrRDD("localhost:9983/lwfusion/3.1.0/solr", "lucidfind", sc)
+import org.apache.spark.rdd.RDD
+import java.io._
+import org.apache.spark.ml.feature.{RegexTokenizer, HashingTF, IDF, Tokenizer, CountVectorizer, CountVectorizerModel, StopWordsRemover}
+import org.apache.spark.mllib.feature.Stemmer
+import org.apache.spark.sql.functions._
+import org.apache.spark.mllib.linalg.{Vector,Vectors}
+import org.apache.spark.mllib.linalg.distributed._
+import collection.mutable.HashMap
+import org.apache.spark.sql.SQLContext
+import org.apache.spark.sql.functions.{stddev_samp, stddev_pop}
+
+val sqlContext = spark.sqlContext
+val options = Map(
+  "collection" -> "lucidfind",
+  "zkhost" -> "localhost:9983/lwfusion/3.1.0/solr"
+)
+val rawDF = spark.read.format("solr").options(options).load
+var tempRDD = rawDF.rdd.map{case c=> (c.getAs[String](15),c.getAs[String](31) + "\n" + c.getAs[String](7))}
+var tempDF = tempRDD.map{case c=> (c._1,c._2,c._2.length)}.toDF("hash_id","contents","length")
+
+var avgLength: Double = tempDF.agg(avg("length")).rdd.map{case c=>c.getDouble(0)}.collect()(0)
+var std: Double = tempDF.agg(stddev_samp("length")).rdd.map{case c=> c.getDouble(0)}.collect()(0)
+val limit: Double = avgLength+3*std
+
+var df = tempDF.rdd.filter{case c=> !(c.getInt(2) > limit)}.map{case c=> (c.getString(0),c.getString(1))}.toDF("hash_id":String,"contents":String)
+df.show
+/*val sentenceData = spark.createDataFrame(Seq(
+  ("hash4", "This needs a lot of cleaning and classes in Spark"),
+  ("hash5", "Logistic regression is widely used algorithm"),
+  ("hash1", "Hi I heard about Spark123 D##### ssps$.`WA!"),
+  ("hash2", "I wish Java could use case classes"),
+  ("hash3", "Logistic regression models are neat!@#!$dvfs")
+)).toDF("label", "sentence")*/
+
+val stemmer = new Stemmer().setInputCol("contents").setOutputCol("stemmed").setLanguage("English")
+val stemmed = stemmer.transform(df)
+stemmed.show
+val regexTokenizer = new RegexTokenizer().setInputCol("stemmed").setOutputCol("tokens").setPattern("[^a-zA-Z]+").setToLowercase(true)
+val regexTokenized = regexTokenizer.transform(stemmed)
+regexTokenized.show
+val stopWordsRemover = new StopWordsRemover("stopWords").setInputCol("tokens").setOutputCol("stopwords")
+val stopWordsRemoved = stopWordsRemover.transform(regexTokenized)
+stopWordsRemoved.show
+
+
+val cvModel: CountVectorizerModel = new CountVectorizer().setInputCol("stopwords").setOutputCol("features").setMinDF(2).fit(stopWordsRemoved)
+var rescaledData = cvModel.transform(stopWordsRemoved)
+
+var rddVector = rescaledData.select("hash_id","features").rdd.map{case row => (
+   row.getAs[String]("hash_id"),
+   org.apache.spark.mllib.linalg.Vectors.fromML(row.getAs[org.apache.spark.ml.linalg.SparseVector]("features"))
+)}.zipWithIndex
+
+//var hashToIndexMapping = new HashMap[String,Long]()
+//rddVector.collect.foreach{case ((hash,vector),index) => hashToIndexMapping+=(hash->index)}
+
+val indexedRDD = rddVector.map{
+    case((hash,vector), index) => IndexedRow(index, vector)
+}
+//make a matrix 
+val matrix = new IndexedRowMatrix(indexedRDD)
+//calculate the distributions
+val dist = matrix.toCoordinateMatrix.transpose().toIndexedRowMatrix().columnSimilarities()
