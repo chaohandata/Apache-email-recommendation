@@ -1,5 +1,5 @@
 import com.lucidworks.spark.rdd.SolrRDD
-//val solrRDD = SolrRDD("localhost:9983/lwfusion/3.1.0/solr", "lucidfind", sc)
+import com.github.karlhigley.spark.neighbors.ANN
 import org.apache.spark.rdd.RDD
 import java.io._
 import org.apache.spark.ml.feature.{RegexTokenizer, HashingTF, IDF, Tokenizer, CountVectorizer, CountVectorizerModel, StopWordsRemover}
@@ -11,9 +11,8 @@ import collection.mutable.HashMap
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.functions.{stddev_samp, stddev_pop}
 
-
-
 val sqlContext = spark.sqlContext
+//val solrRDD = SolrRDD("localhost:9983/lwfusion/3.1.0/solr", "lucidfind", sc)
 val options = Map(
   "collection" -> "lucidfind",
   "zkhost" -> "localhost:9983/lwfusion/3.1.0/solr"
@@ -28,13 +27,6 @@ val limit: Double = avgLength+3*std
 
 var df = tempDF.rdd.filter{case c=> !(c.getInt(2) > limit)}.map{case c=> (c.getString(0),c.getString(1))}.toDF("hash_id":String,"contents":String)
 df.show
-/*val sentenceData = spark.createDataFrame(Seq(
-  ("hash4", "This needs a lot of cleaning and classes in Spark"),
-  ("hash5", "Logistic regression is widely used algorithm"),
-  ("hash1", "Hi I heard about Spark123 D##### ssps$.`WA!"),
-  ("hash2", "I wish Java could use case classes"),
-  ("hash3", "Logistic regression models are neat!@#!$dvfs")
-)).toDF("label", "sentence")*/
 
 val stemmer = new Stemmer().setInputCol("contents").setOutputCol("stemmed").setLanguage("English")
 val stemmed = stemmer.transform(df)
@@ -46,22 +38,5 @@ val stopWordsRemover = new StopWordsRemover("stopWords").setInputCol("tokens").s
 val stopWordsRemoved = stopWordsRemover.transform(regexTokenized)
 stopWordsRemoved.show
 
-
 val cvModel: CountVectorizerModel = new CountVectorizer().setInputCol("stopwords").setOutputCol("features").setMinDF(2).fit(stopWordsRemoved)
 var rescaledData = cvModel.transform(stopWordsRemoved)
-
-var rddVector = rescaledData.select("hash_id","features").rdd.map{case row => (
-   row.getAs[String]("hash_id"),
-   org.apache.spark.mllib.linalg.Vectors.fromML(row.getAs[org.apache.spark.ml.linalg.SparseVector]("features"))
-)}.zipWithIndex
-
-//var hashToIndexMapping = new HashMap[String,Long]()
-//rddVector.collect.foreach{case ((hash,vector),index) => hashToIndexMapping+=(hash->index)}
-
-val indexedRDD = rddVector.map{
-    case((hash,vector), index) => IndexedRow(index, vector)
-}
-//make a matrix 
-val matrix = new IndexedRowMatrix(indexedRDD)
-//calculate the distributions
-val dist = matrix.toCoordinateMatrix.transpose().toIndexedRowMatrix().columnSimilarities()
