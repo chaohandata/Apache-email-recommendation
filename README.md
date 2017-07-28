@@ -62,6 +62,7 @@ Before we trust this method we need to evaluate its performance. The pairwise co
 scala> import com.github.karlhigley.spark.neighbors.ANN
 ```
 If the above executes without error proceed:
+
 2. Copy and paste the contents in the below script in the `spark-shell`
 https://github.com/shahanesanket/Apache-email-recommendation/blob/master/scala/lsh_recs.scala
 ```
