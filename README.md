@@ -93,3 +93,11 @@ Set these parameters in the script as per the problem statement.
 10. Write the output back to solr.
 
 >Notebooks folder contains the prototyping code done in python. It references the data in sample-data folder but it is not posted in the repository. If you need the data let me know I can provide a zip file.
+
+## Next Steps:
+
+1. Convert scala script to standard Fusion job
+2. Run on the complete Apache Mailing Lists data and start giving the basic recommendations.
+3. Collect data about emails read in every session.
+4. When the data is sufficient to learn the Transition Probabilites for Markov Chains, train a MC model and swith to it.
+5. Evaluating and comparing the quality of the results of the two models is tricky as one captures pure textual similarity and the other learn form human interaction. We need to measure the the recommendations based on number of recommendations beign clicked (click-through rate) and then AB-Testing. Another way to asses the quality would be to use `page dwell time`. Chao is doing something with the `dwell time`. These are of course design questions and can be handled once we have sufficient data to train the MC model.
