@@ -101,4 +101,10 @@ Set these parameters in the script as per the problem statement.
 2. Run on the complete Apache Mailing Lists data and start giving the basic recommendations.
 3. Collect data about emails read in every session.
 4. When the data is sufficient to learn the Transition Probabilites for Markov Chains, train a MC model and swith to it.
-5. Evaluating and comparing the quality of the results of the two models is tricky as one captures pure textual similarity and the other learn form human interaction. We need to measure the the recommendations based on number of recommendations beign clicked (click-through rate) and then AB-Testing. Another way to asses the quality would be to use `page dwell time`. Chao is doing something with the `dwell time`. These are of course design questions and can be handled once we have sufficient data to train the MC model.
+5. Evaluating and comparing the quality of the results of the two models is tricky as one captures pure textual similarity and the other learn form human interaction. We need to measure the quality of recommendations based on number of recommendations beign clicked (click-through rate) and then AB-Testing to compare the models. Another way to asses the quality would be to use `page dwell time`. Chao is doing something with the `dwell time`. These are of course design questions and can be handled once we have sufficient data to train the MC model.
+
+## Ideas to think about in the future:
+
+Cosine is already a good measure since it considers some semantic similarity too, as it ignores the order of the words occuring in the documents. 
+
+1. Adding synonyms to the documents after tokenization will further help in capturing the semantic similarity between documents.
