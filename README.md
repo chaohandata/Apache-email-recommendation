@@ -107,4 +107,4 @@ Set these parameters in the script as per the problem statement.
 
 Cosine is already a good measure since it considers some semantic similarity too, as it ignores the order of the words occuring in the documents. 
 
-1. Adding synonyms to the documents after tokenization will further help in capturing the semantic similarity between documents.
+1. Adding synonyms after tokenization will further help in capturing the semantic similarity between documents.
